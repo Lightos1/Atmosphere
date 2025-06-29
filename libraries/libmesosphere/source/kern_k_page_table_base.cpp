@@ -257,6 +257,10 @@ namespace ams::kern {
 
                 /* Determine where the current region should go. */
                 cur_region.alloc_index = alloc_sizes[1] >= alloc_sizes[0] ? 1 : 0;
+
+                if (!m_enable_aslr) {
+                    cur_region.alloc_index = 1;
+                }
                 ++alloc_counts[cur_region.alloc_index];
 
                 /* Check that the current region can fit. */
@@ -305,6 +309,7 @@ namespace ams::kern {
                             }
                         }
                     }
+                    std::swap(region_layouts[0], region_layouts[3]);
                 }
 
                 /* Determine aslr offsets for the current space. */
@@ -322,6 +327,10 @@ namespace ams::kern {
                                 std::swap(aslr_offsets[i], aslr_offsets[j]);
                             }
                         }
+                    }
+                } else {
+                    for (size_t i = 0; i < cur_alloc_count; ++i) {
+                        aslr_offsets[i] = ((0x27a9000000 - GetInteger(alloc_starts[cur_alloc_index]))/ RegionAlignment) * RegionAlignment;
                     }
                 }
 

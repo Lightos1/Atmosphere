@@ -29,6 +29,8 @@ namespace ams::ldr {
 
         /* Convenience defines. */
         constexpr size_t SystemResourceSizeMax = 0x1FE00000;
+        constexpr ncm::ProgramId BREATH_OF_THE_WILD{ 0x01007EF00011E000 };
+        constexpr const char *ASLR_CONFIG = "sdmc:/atmosphere/config/aslr.bin";
 
         /* Types. */
         enum NsoIndex {
@@ -468,14 +470,15 @@ namespace ams::ldr {
 
             /* Calculate ASLR. */
             uintptr_t aslr_start = 0;
-            size_t aslr_size     = 0;
+            size_t aslr_size = 0;
+
             if (hos::GetVersion() >= hos::Version_2_0_0) {
                 switch (out_param->flags & svc::CreateProcessFlag_AddressSpaceMask) {
                     case svc::CreateProcessFlag_AddressSpace32Bit:
                     case svc::CreateProcessFlag_AddressSpace32BitWithoutAlias:
-                        aslr_start = svc::AddressSmallMap32Start;
-                        aslr_size  = svc::AddressSmallMap32Size;
-                        break;
+                    aslr_start = svc::AddressSmallMap32Start;
+                    aslr_size  = svc::AddressSmallMap32Size;
+                    break;
                     case svc::CreateProcessFlag_AddressSpace64BitDeprecated:
                         aslr_start = svc::AddressSmallMap36Start;
                         aslr_size  = svc::AddressSmallMap36Size;
@@ -496,13 +499,17 @@ namespace ams::ldr {
                     aslr_size  = svc::AddressSmallMap32Size;
                 }
             }
+
             R_UNLESS(total_size <= aslr_size, svc::ResultOutOfMemory());
 
             /* Set Create Process output. */
             uintptr_t aslr_slide = 0;
             size_t free_size     = (aslr_size - total_size);
+
             if (out_param->flags & svc::CreateProcessFlag_EnableAslr) {
                 aslr_slide = GenerateSecureRandom(free_size / os::MemoryBlockUnitSize) * os::MemoryBlockUnitSize;
+            } else {
+                aslr_start = 0xff600000;
             }
 
             /* Set out. */
@@ -666,6 +673,11 @@ namespace ams::ldr {
     /* Process Creation API. */
     Result CreateProcess(os::NativeHandle *out, PinId pin_id, const ncm::ProgramLocation &loc, const cfg::OverrideStatus &override_status, const char *path, const ArgumentStore::Entry *argument, u32 flags, os::NativeHandle resource_limit, const ldr::ProgramAttributes &attrs) {
         /* Mount code. */
+
+        if (loc.program_id == BREATH_OF_THE_WILD) {
+            flags |= CreateProcessFlag_DisableAslr;
+        }
+
         AMS_UNUSED(path);
         ScopedCodeMount mount(loc, override_status, attrs);
         R_TRY(mount.GetResult());
