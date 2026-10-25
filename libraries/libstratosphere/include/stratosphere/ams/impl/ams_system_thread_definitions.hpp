@@ -176,6 +176,9 @@ namespace ams::impl {
     /* ServiceProfile */
     AMS_DEFINE_SYSTEM_THREAD(-1, sprofile, IpcServer);
 
+    /* pcv */
+    AMS_DEFINE_SYSTEM_THREAD(4, pcv, Main);
+    AMS_DEFINE_SYSTEM_THREAD(4, pcv, RtcIpcServer);
 
     #undef AMS_DEFINE_SYSTEM_THREAD
 
