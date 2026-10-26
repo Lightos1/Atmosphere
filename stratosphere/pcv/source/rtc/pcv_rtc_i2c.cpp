@@ -48,4 +48,19 @@ namespace ams::pcv::rtc {
         R_RETURN(i2c::ExecuteCommandList(dst, dst_size, session, cmd_list, formatter.GetCurrentLength()));
     }
 
+    Result I2cReadUntilFlagClear(i2c::I2cSession &session, u8 &out, u8 cmd, u8 flag) {
+        constexpr u32 MaxAttempts = 4;
+
+        for (u32 i = 0; i < MaxAttempts; ++i) {
+            svc::SleepThread(16000000);
+            R_TRY(I2cRead(session, std::addressof(out), sizeof(out), std::addressof(cmd), sizeof(cmd)));
+
+            if ((out & flag) == 0) {
+                R_SUCCEED();
+            }
+        }
+
+        R_THROW(ResultRtcReadUpdateTimeout());
+    }
+
 }

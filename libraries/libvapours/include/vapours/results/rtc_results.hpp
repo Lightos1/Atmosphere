@@ -22,5 +22,6 @@ R_DEFINE_NAMESPACE_RESULT_MODULE(ams::pcv::rtc, 191);
 namespace ams::pcv::rtc {
 
     R_DEFINE_ERROR_RESULT(RtcReadUpdateTimeout, 102);
+    R_DEFINE_ERROR_RESULT(RtcWriteUpdateTimeout, 103);
 
 }

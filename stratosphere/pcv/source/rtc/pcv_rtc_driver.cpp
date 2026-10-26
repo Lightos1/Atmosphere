@@ -17,6 +17,7 @@
 #include <stratosphere.hpp>
 #include "pcv_rtc_registers.hpp"
 #include "pcv_rtc_i2c.hpp"
+#include "pcv_rtc_device.hpp"
 
 namespace ams::pcv::rtc {
 
@@ -24,6 +25,8 @@ namespace ams::pcv::rtc {
 
         constinit i2c::I2cSession pmic_session;
         constinit i2c::I2cSession rtc_session;
+
+        constinit RtcDevice g_rtc_device(rtc_session);
 
         bool GetExternalRtcResetFlag() {
             bool flag = false;
@@ -35,27 +38,6 @@ namespace ams::pcv::rtc {
         void SetExternalRtcResetFlag(bool flag) {
             R_ABORT_UNLESS(::setsysSetExternalRtcResetFlag(flag));
         }
-
-        Result WaitReadUpdateCleared() {
-            constexpr u32 MaxAttempts = 4;
-            u8 out = 0;
-            u8 cmd = Max77620RtcUpdate0Reg;
-
-            for (u32 i = 0; i < MaxAttempts; ++i) {
-                svc::SleepThread(16000000);
-                R_TRY(I2cRead(rtc_session, std::addressof(out), sizeof(out), std::addressof(cmd), sizeof(cmd)));
-
-                /* Check if the flag is cleared. */
-                if ((out & Max77620RtcReadUpdate) == 0) {
-                    break;
-                }
-            }
-
-            R_UNLESS((out & Max77620RtcReadUpdate) == 0, ResultRtcReadUpdateTimeout());
-
-            return ResultSuccess();
-        }
-
     }
 
     Result Initialize() {
@@ -68,7 +50,12 @@ namespace ams::pcv::rtc {
             R_ABORT_UNLESS(I2cWrite(rtc_session, Max77620RtcUpdate0Reg, Max77620RtcReadUpdate));
 
             /* Wait until the flag gets cleared. */
-            R_ABORT_UNLESS(WaitReadUpdateCleared());
+            {
+                u8 outValue = 0;
+                R_ABORT_UNLESS(I2cReadUntilFlagClear(rtc_session, outValue, Max77620RtcUpdate0Reg, Max77620RtcReadUpdate));
+
+                R_UNLESS((outValue & Max77620RtcReadUpdate) == 0, ResultRtcReadUpdateTimeout());
+            }
 
             /* Read the control register. */
             u8 rtc_control_reg = 0;
@@ -101,6 +88,8 @@ namespace ams::pcv::rtc {
 
         R_ABORT_UNLESS(I2cWrite(pmic_session, Max77620RegCnfg1_32K, oscil_config));
         svc::SleepThread(500000);
+
+        R_ABORT_UNLESS(g_rtc_device.Initialize());
 
         /* todo pmic and alarm stuff. */
 
