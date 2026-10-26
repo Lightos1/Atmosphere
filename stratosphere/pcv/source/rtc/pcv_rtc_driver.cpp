@@ -102,4 +102,8 @@ namespace ams::pcv::rtc {
         return ResultSuccess();
     }
 
+    RtcDevice &GetRtcDevice() {
+        return g_rtc_device;
+    }
+
 }

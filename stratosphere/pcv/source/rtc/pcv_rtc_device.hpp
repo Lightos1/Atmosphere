@@ -511,16 +511,16 @@ namespace ams::pcv::rtc {
                 return ResultSuccess();
             }
 
-            Result SetResetOnShutdown(bool do_reset) {
+            Result SetResetOnShutdown(u8 do_reset) {
                 m_reset_on_shutdown = do_reset;
 
                 return ResultSuccess();
             }
 
-            Result GetResetDetected(u8 *out) {
-                R_UNLESS(out != nullptr, ResultInvalidArgument());
+            Result GetResetDetected(u8 *reset_detected) {
+                R_UNLESS(reset_detected != nullptr, ResultInvalidArgument());
 
-                *out = GetExternalRtcResetFlag();
+                *reset_detected = GetExternalRtcResetFlag();
 
                 return ResultSuccess();
             }

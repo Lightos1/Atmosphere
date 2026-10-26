@@ -16,9 +16,11 @@
 
 #pragma once
 #include <stratosphere.hpp>
+#include "pcv_rtc_device.hpp"
 
 namespace ams::pcv::rtc {
 
     Result Initialize();
+    RtcDevice &GetRtcDevice();
 
 }
