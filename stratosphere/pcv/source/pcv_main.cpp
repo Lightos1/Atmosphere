@@ -81,8 +81,7 @@ namespace ams {
         R_ABORT_UNLESS(pcv::rtc::Initialize());
         pcv::rtc::InitializeServer();
         pcv::rtc::StartServer();
-
-        AMS_INFINITE_LOOP();
+        pcv::rtc::WaitServer();
     }
 
 }
