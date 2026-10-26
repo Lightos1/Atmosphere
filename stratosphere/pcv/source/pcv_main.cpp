@@ -41,6 +41,8 @@ namespace ams {
         AMS_ASSERT(os::GetThreadPriority(os::GetCurrentThread()) == AMS_GET_SYSTEM_THREAD_PRIORITY(pcv, Main));
 
         R_ABORT_UNLESS(pcv::rtc::Initialize());
+
+        AMS_INFINITE_LOOP();
     }
 
 }

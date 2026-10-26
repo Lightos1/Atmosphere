@@ -4,7 +4,15 @@
 
 namespace ams::pcv::rtc {
 
-    struct RtcRegisters;
+    struct RtcRegisters {
+        u32 sec;
+        u32 min;
+        u32 hour;
+        u32 weekday;
+        u32 month;
+        u32 year;
+        u32 day;
+    };
 
     struct AlarmTimeRegister {
         u8 sec;
@@ -18,18 +26,18 @@ namespace ams::pcv::rtc {
     static_assert(sizeof(AlarmTimeRegister) == Max77620RtcTimeRegCount);
 
     class RtcDevice {
+        public:
+            static constexpr int AlarmCount = 2;
         private:
-        static constexpr int AlarmCount = 2;
-
-        static constexpr AlarmTimeRegister DefaultTimeRegister = {
-            .sec     = 0,
-            .min     = 0,
-            .hour    = 0,
-            .weekday = 1,
-            .month   = 1,
-            .year    = 0,
-            .day     = 1,
-        };
+            static constexpr AlarmTimeRegister DefaultTimeRegister = {
+                .sec     = 0,
+                .min     = 0,
+                .hour    = 0,
+                .weekday = 1,
+                .month   = 1,
+                .year    = 0,
+                .day     = 1,
+            };
 
         private:
             i2c::I2cSession &m_session;
@@ -59,7 +67,7 @@ namespace ams::pcv::rtc {
                         break;
                     }
                 }
-                R_UNLESS(ready, ResultRtcReadUpdateTimeout());
+                R_UNLESS(ready, ResultReadUpdateTimeout());
 
                 /* Read the requested registers. */
                 for (u8 i = 0; i < count; ++i) {
@@ -107,6 +115,10 @@ namespace ams::pcv::rtc {
                 alarm.day   |= Max77620RtcAlarmEnMask;
             }
 
+            ALWAYS_INLINE u8 GetAlarmRegister(u32 alarm_id) const {
+                return alarm_id ? Max77620RtcAlarm2Reg  : Max77620RtcAlarm1Reg;
+            }
+
             Result IsRtcModeConfigured(bool *out) {
                 u8 control = 0;
                 R_TRY(ReadRegisters(Max77620RtcControlReg, 1, std::addressof(control)));
@@ -134,7 +146,7 @@ namespace ams::pcv::rtc {
                 R_TRY(ReadRegisters(Max77620RtcIntMReg, 1, std::addressof(interrupt_mask)));
 
                 const u8 alarm_mask     = alarm_id ? Max77620RtcAlarm2Mask : Max77620RtcAlarm1Mask;
-                const u8 alarm_register = alarm_id ? Max77620RtcAlarm2Reg  : Max77620RtcAlarm1Reg;
+                const u8 alarm_register = GetAlarmRegister(alarm_id);
 
                 /* A set bit masks the interrupt. */
                 if (enable) {
@@ -233,17 +245,45 @@ namespace ams::pcv::rtc {
             }
 
             Result WriteAlarmTime(u32 alarm_id, const RtcRegisters &time) {
-                (void) alarm_id;
-                (void) time;
+                R_UNLESS(IsReady(), ResultDeviceNotReady());
+                R_UNLESS(alarm_id < AlarmCount, ResultInvalidArguments());
 
-                AMS_ABORT("TODO");
+                const u8 alarm_register = GetAlarmRegister(alarm_id);
+
+                AlarmTimeRegister alarm = {
+                    .sec     = static_cast<u8>(time.sec     & Max77620RtcSecValueMask),
+                    .min     = static_cast<u8>(time.min     & Max77620RtcMinValueMask),
+                    .hour    = static_cast<u8>(time.hour    & Max77620RtcHourValueMask),
+                    .weekday = static_cast<u8>(time.weekday & Max77620RtcWeekdayValueMask),
+                    .month   = static_cast<u8>(time.month   & Max77620RtcMonthValueMask),
+                    .year    = static_cast<u8>(time.year    & Max77620RtcYearValueMask),
+                    .day     = static_cast<u8>(time.day     & Max77620RtcDayValueMask),
+                };
+
+                if (m_alarm_enabled[alarm_id]) {
+                    SetAlarmEnableBits(alarm);
+                }
+
+                return WriteRegisters(alarm_register, sizeof(alarm), reinterpret_cast<const u8 *>(std::addressof(alarm)));
             }
 
-            Result SetAlarmEnabled(u32 alarm_id, bool enable) {
-                (void) alarm_id;
-                (void) enable;
+            Result DisableAlarm(u32 alarm_id) {
+                R_UNLESS(alarm_id < AlarmCount, ResultInvalidArguments());
+                R_UNLESS(R_SUCCEEDED(SetAlarmEnabledImpl(alarm_id, false)), ResultAlarmDisableFailed());
 
-                AMS_ABORT("TODO");
+                constexpr RtcRegisters DisabledAlarmTime = {
+                    .sec     = 59,
+                    .min     = 59,
+                    .hour    = 23,
+                    .weekday = 0,
+                    .month   = 2,
+                    .year    = 99,
+                    .day     = 30,
+                };
+
+                R_UNLESS(R_SUCCEEDED(WriteAlarmTime(alarm_id, DisabledAlarmTime)), ResultAlarmDisableFailed());
+
+                return ResultSuccess();
             }
     };
 

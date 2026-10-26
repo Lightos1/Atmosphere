@@ -60,7 +60,7 @@ namespace ams::pcv::rtc {
             }
         }
 
-        R_THROW(ResultRtcReadUpdateTimeout());
+        R_THROW(ResultReadUpdateTimeout());
     }
 
 }

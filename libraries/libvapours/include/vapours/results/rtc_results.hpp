@@ -21,7 +21,10 @@ R_DEFINE_NAMESPACE_RESULT_MODULE(ams::pcv::rtc, 191);
 
 namespace ams::pcv::rtc {
 
-    R_DEFINE_ERROR_RESULT(RtcReadUpdateTimeout, 102);
-    R_DEFINE_ERROR_RESULT(RtcWriteUpdateTimeout, 103);
+    R_DEFINE_ERROR_RESULT(InvalidArguments, 1);
+    R_DEFINE_ERROR_RESULT(DeviceNotReady, 2);
+    R_DEFINE_ERROR_RESULT(WriteUpdateTimeout, 101);
+    R_DEFINE_ERROR_RESULT(ReadUpdateTimeout, 102);
+    R_DEFINE_ERROR_RESULT(AlarmDisableFailed, 103);
 
 }

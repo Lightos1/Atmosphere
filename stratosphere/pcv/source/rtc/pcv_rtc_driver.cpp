@@ -54,7 +54,7 @@ namespace ams::pcv::rtc {
                 u8 outValue = 0;
                 R_ABORT_UNLESS(I2cReadUntilFlagClear(rtc_session, outValue, Max77620RtcUpdate0Reg, Max77620RtcReadUpdate));
 
-                R_UNLESS((outValue & Max77620RtcReadUpdate) == 0, ResultRtcReadUpdateTimeout());
+                R_UNLESS((outValue & Max77620RtcReadUpdate) == 0, ResultReadUpdateTimeout());
             }
 
             /* Read the control register. */
@@ -86,12 +86,19 @@ namespace ams::pcv::rtc {
         oscil_config &= ~(Max77620Cnfg1_PwrMd32_Mask | Max77620Cnfg1_32K_LoadMask);
         oscil_config |= Max77620Cnfg1_32K_LoadMask;
 
+        /* Write the config */
         R_ABORT_UNLESS(I2cWrite(pmic_session, Max77620RegCnfg1_32K, oscil_config));
         svc::SleepThread(500000);
 
+        /* Initialize the rtc device. */
         R_ABORT_UNLESS(g_rtc_device.Initialize());
 
-        /* todo pmic and alarm stuff. */
+        /* Disable both alarms. */
+        R_ABORT_UNLESS(g_rtc_device.DisableAlarm(0));
+        R_ABORT_UNLESS(g_rtc_device.DisableAlarm(1));
+
+        /* Note: Nintendo does more linked list linking crap here. */
+        /* But this is *kinda* not needed. */
 
         return ResultSuccess();
     }
