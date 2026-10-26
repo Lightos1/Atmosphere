@@ -57,6 +57,16 @@ namespace ams::pcv::rtc {
     constexpr inline u8 Max77620RtcBinFormat = BIT(0);
     constexpr inline u8 Max77620Rtc24h       = BIT(1);
 
+    constexpr inline u8 Max77620RtcControlBcd12h = 0;
+
+    /* RTCCNTLM bits. */
+    constexpr inline u8 Max77620RtcControlMBinFormat = BIT(0);
+    constexpr inline u8 Max77620RtcControlM24h       = BIT(1);
+    constexpr inline u8 Max77620RtcControlMUnmaskAll = 0;
+
+    /* RTCINTM values. */
+    constexpr inline u8 Max77620RtcIntMaskAll = 0xFF;
+
     /* RTCUPDATE0 bits. */
     constexpr inline u8 Max77620RtcWriteUpdate      = BIT(0);
     constexpr inline u8 Max77620RtcReadUpdate       = BIT(4);
