@@ -173,7 +173,7 @@ namespace ams::pcv::rtc {
             }
 
             ALWAYS_INLINE u8 GetAlarmRegister(u32 alarm_id) const {
-                return alarm_id ? Max77620RtcAlarm2Reg  : Max77620RtcAlarm1Reg;
+                return alarm_id ? Max77620RtcAlarm2Reg : Max77620RtcAlarm1Reg;
             }
 
             ALWAYS_INLINE RtcRegisters ConvertToRtcRegisters(u64 in_seconds) {
@@ -292,8 +292,8 @@ namespace ams::pcv::rtc {
             }
 
             Result ReadTime(RtcRegisters *out) {
-                R_UNLESS(IsReady(),        ResultDeviceNotReady());
-                R_UNLESS(out != nullptr,   ResultInvalidArgument());
+                R_UNLESS(IsReady(),      ResultDeviceNotReady());
+                R_UNLESS(out != nullptr, ResultInvalidArgument());
 
                 /* Read the alarm time registers. */
                 HwTimeRegisters regs = {};
@@ -311,7 +311,7 @@ namespace ams::pcv::rtc {
             }
 
             Result SetTime(RtcRegisters *in_regs) {
-                R_UNLESS(IsReady(),         ResultDeviceNotReady());
+                R_UNLESS(IsReady(),          ResultDeviceNotReady());
                 R_UNLESS(in_regs != nullptr, ResultInvalidArgument());
 
                 /* Write the alarm time registers. */
@@ -372,7 +372,7 @@ namespace ams::pcv::rtc {
                 }
 
                 /* Rewrite the interrupt mask with whatever it currently holds. */
-                R_TRY(ReadRtcRegisters(Max77620RtcIntMReg, 1, std::addressof(data)));
+                R_TRY(ReadRtcRegisters(Max77620RtcIntMReg,  1, std::addressof(data)));
                 R_TRY(WriteRtcRegisters(Max77620RtcIntMReg, 1, std::addressof(data)));
 
                 m_ready = true;
@@ -383,7 +383,7 @@ namespace ams::pcv::rtc {
             ALWAYS_INLINE bool IsReady() const { return m_ready; }
 
             Result WriteAlarmTime(u32 alarm_id, const RtcRegisters &time) {
-                R_UNLESS(IsReady(), ResultDeviceNotReady());
+                R_UNLESS(IsReady(),             ResultDeviceNotReady());
                 R_UNLESS(alarm_id < AlarmCount, ResultInvalidArgument());
 
                 const u8 alarm_register = GetAlarmRegister(alarm_id);
