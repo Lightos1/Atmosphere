@@ -15,6 +15,7 @@
  */
 
 #include <stratosphere.hpp>
+#include "pcv_rtc_i2c.hpp"
 
 namespace ams::pcv::rtc {
 
@@ -23,6 +24,9 @@ namespace ams::pcv::rtc {
     }
 
     Result InitializeI2cSessions(i2c::I2cSession &pmic_session, i2c::I2cSession &rtc_session) {
+        /* Connect the i2c client library to the i2c services. */
+        i2c::Initialize();
+
         R_TRY(i2c::OpenSession(std::addressof(pmic_session), i2c::DeviceCode_Max77620Pmic));
         R_TRY(i2c::OpenSession(std::addressof(rtc_session),  i2c::DeviceCode_Max77620Rtc));
 
