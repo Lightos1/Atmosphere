@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <stratosphere.hpp>
+#include "i2c_remote_manager_impl.hpp"
 
 namespace ams::i2c {
 
@@ -30,6 +31,14 @@ namespace ams::i2c {
         ams::sf::SharedPointer<sf::IManager> g_i2c_pcv_manager;
         constinit int g_i2c_pcv_count = 0;
 
+        #if defined(ATMOSPHERE_OS_HORIZON)
+        constinit bool g_remote = false;
+        constinit ::Service g_i2c_srv     = {};
+        constinit ::Service g_i2c_pcv_srv = {};
+        constinit ams::sf::UnmanagedServiceObject<sf::IManager, RemoteManagerImpl> g_remote_i2c_manager_impl(std::addressof(g_i2c_srv));
+        constinit ams::sf::UnmanagedServiceObject<sf::IManager, RemoteManagerImpl> g_remote_i2c_pcv_manager_impl(std::addressof(g_i2c_pcv_srv));
+        #endif
+
         i2c::sf::ISession *GetInterface(const I2cSession &session) {
             AMS_ASSERT(session._session != nullptr);
             return static_cast<i2c::sf::ISession *>(session._session);
@@ -43,6 +52,34 @@ namespace ams::i2c {
             }
         }
 
+    }
+
+    void Initialize() {
+        #if defined(ATMOSPHERE_OS_HORIZON)
+        std::scoped_lock lk(g_init_mutex);
+
+        if ((g_initialize_count++) == 0) {
+            R_ABORT_UNLESS(::smGetService(std::addressof(g_i2c_srv),     "i2c"));
+            R_ABORT_UNLESS(::smGetService(std::addressof(g_i2c_pcv_srv), "i2c:pcv"));
+            g_remote = true;
+
+            {
+                std::scoped_lock lk(g_i2c_mutex);
+                g_i2c_manager = g_remote_i2c_manager_impl.GetShared();
+                AMS_ABORT_UNLESS(g_i2c_count == 0);
+                g_i2c_count = 1;
+            }
+
+            {
+                std::scoped_lock lk(g_i2c_pcv_mutex);
+                g_i2c_pcv_manager = g_remote_i2c_pcv_manager_impl.GetShared();
+                AMS_ABORT_UNLESS(g_i2c_pcv_count == 0);
+                g_i2c_pcv_count = 1;
+            }
+        }
+        #else
+        AMS_ABORT("TODO");
+        #endif
     }
 
     void InitializeWith(ams::sf::SharedPointer<i2c::sf::IManager> sp, ams::sf::SharedPointer<i2c::sf::IManager> sp_pcv) {
@@ -97,6 +134,14 @@ namespace ams::i2c {
                     }
                 }
             }
+
+            #if defined(ATMOSPHERE_OS_HORIZON)
+            if (g_remote) {
+                ::serviceClose(std::addressof(g_i2c_pcv_srv));
+                ::serviceClose(std::addressof(g_i2c_srv));
+                g_remote = false;
+            }
+            #endif
         }
     }
 
