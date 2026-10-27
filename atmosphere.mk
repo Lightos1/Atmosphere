@@ -45,6 +45,7 @@ dist: dist-no-debug
 	cp $(CURRENT_DIRECTORY)/stratosphere/LogManager/$(ATMOSPHERE_OUT_DIR)/LogManager.elf $(DIST_DIR)/LogManager.elf
 	cp $(CURRENT_DIRECTORY)/stratosphere/ncm/$(ATMOSPHERE_OUT_DIR)/ncm.elf $(DIST_DIR)/ncm.elf
 	cp $(CURRENT_DIRECTORY)/stratosphere/pgl/$(ATMOSPHERE_OUT_DIR)/pgl.elf $(DIST_DIR)/pgl.elf
+	cp $(CURRENT_DIRECTORY)/stratosphere/pcv/$(ATMOSPHERE_OUT_DIR)/pcv.elf $(DIST_DIR)/pcv.elf
 	cp $(CURRENT_DIRECTORY)/stratosphere/pm/$(ATMOSPHERE_OUT_DIR)/pm.elf $(DIST_DIR)/pm.elf
 	cp $(CURRENT_DIRECTORY)/stratosphere/ro/$(ATMOSPHERE_OUT_DIR)/ro.elf $(DIST_DIR)/ro.elf
 	cp $(CURRENT_DIRECTORY)/stratosphere/sm/$(ATMOSPHERE_OUT_DIR)/sm.elf $(DIST_DIR)/sm.elf

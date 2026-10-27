@@ -15,6 +15,7 @@
  */
 #include <stratosphere.hpp>
 #include "ldr_development_manager.hpp"
+#include "ldr_embedded_code.hpp"
 #include "ldr_loader_service.hpp"
 
 namespace ams {
@@ -139,6 +140,9 @@ namespace ams {
         ldr::SetDevelopmentForAcidProductionCheck(spl::IsDevelopment());
         ldr::SetDevelopmentForAntiDowngradeCheck(spl::IsDevelopment());
         ldr::SetDevelopmentForAcidSignatureCheck(spl::IsDevelopment());
+
+        /* Register the program packages embedded in the loader */
+        ldr::RegisterEmbeddedCodePackages();
 
         /* Register the loader services. */
         ldr::RegisterServiceSessions();

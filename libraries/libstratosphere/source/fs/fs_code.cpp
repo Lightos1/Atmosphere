@@ -28,6 +28,10 @@ namespace ams::fs {
         constinit util::TypedStorage<FileHandleStorage> g_stratosphere_romfs_storage = {};
         constinit util::TypedStorage<RomFsFileSystem> g_stratosphere_romfs_fs = {};
 
+        constinit ncm::ProgramId g_embedded_code_program_id = ncm::InvalidProgramId;
+        constinit const void *g_embedded_code_package       = nullptr;
+        constinit size_t g_embedded_code_package_size       = 0;
+
         Result EnsureStratosphereRomfsMounted() {
             std::scoped_lock lk(g_mount_stratosphere_romfs_lock);
 
@@ -152,7 +156,30 @@ namespace ams::fs {
             R_SUCCEED();
         }
 
+        Result OpenEmbeddedCodeFileSystemImpl(std::unique_ptr<fsa::IFileSystem> *out, ncm::ProgramId program_id) {
+            /* Check that we have an embedded package for this program. */
+            R_UNLESS(g_embedded_code_package != nullptr,       fs::ResultPathNotFound());
+            R_UNLESS(program_id == g_embedded_code_program_id, fs::ResultPathNotFound());
+
+            /* Create a storage for the program's package. */
+            auto package_storage = fs::AllocateShared<MemoryStorage>(const_cast<void *>(g_embedded_code_package), static_cast<s64>(g_embedded_code_package_size));
+            R_UNLESS(package_storage != nullptr, fs::ResultAllocationMemoryFailedInCodeA());
+
+            /* Create a partition filesystem. */
+            auto package_fs = std::make_unique<fssystem::PartitionFileSystem>();
+            R_UNLESS(package_fs != nullptr, fs::ResultAllocationMemoryFailedInCodeA());
+
+            /* Initialize the partition filesystem. */
+            R_TRY(package_fs->Initialize(std::move(package_storage)));
+
+            *out = std::move(package_fs);
+            R_SUCCEED();
+        }
+
         Result OpenSdCardCodeOrStratosphereCodeOrCodeFileSystemImpl(CodeVerificationData *out_verification_data, std::unique_ptr<fsa::IFileSystem> *out, const char *path, fs::ContentAttributes attr, ncm::ProgramId program_id, ncm::StorageId storage_id) {
+            /* If we have an embedded code package, use it. */
+            R_SUCCEED_IF(R_SUCCEEDED(OpenEmbeddedCodeFileSystemImpl(out, program_id)));
+
             /* If we can open an sd card code fs, use it. */
             R_SUCCEED_IF(R_SUCCEEDED(OpenSdCardCodeFileSystemImpl(out, program_id)));
 
@@ -481,6 +508,12 @@ namespace ams::fs {
         AMS_FS_IMPL_ACCESS_LOG_SYSTEM_FS_ACCESSOR_ENABLE(name);
 
         R_SUCCEED();
+    }
+
+    void RegisterEmbeddedCodePackage(ncm::ProgramId program_id, const void *package, size_t package_size) {
+        g_embedded_code_program_id    = program_id;
+        g_embedded_code_package       = package;
+        g_embedded_code_package_size  = package_size;
     }
 
 }

@@ -26,4 +26,9 @@ namespace ams::fs {
     Result MountCodeForAtmosphereWithRedirection(CodeVerificationData *out, const char *name, const char *path, fs::ContentAttributes attr, ncm::ProgramId program_id, ncm::StorageId storage_id, bool is_hbl, bool is_specific);
     Result MountCodeForAtmosphere(CodeVerificationData *out, const char *name, const char *path, fs::ContentAttributes attr, ncm::ProgramId program_id, ncm::StorageId storage_id);
 
+    /* Register a program which is embedded in the calling process. */
+    /* This allows launching/overriding programs before the sd card becomes available */
+    /* There's *probably* a better way of doing this. */
+    void RegisterEmbeddedCodePackage(ncm::ProgramId program_id, const void *package, size_t package_size);
+
 }

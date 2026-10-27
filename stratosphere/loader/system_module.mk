@@ -8,6 +8,12 @@ include $(dir $(abspath $(lastword $(MAKEFILE_LIST))))/../../libraries/config/te
 ATMOSPHERE_SYSTEM_MODULE_TARGETS := kip
 
 #---------------------------------------------------------------------------------
+# pcv is launched before the sd card is available, so we do this horrific crap.
+# Todo: make this better.
+#---------------------------------------------------------------------------------
+PCV_NSP := $(CURRENT_DIRECTORY)/../pcv/$(ATMOSPHERE_OUT_DIR)/pcv.nsp
+
+#---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
 # rules for different file extensions
 #---------------------------------------------------------------------------------
@@ -23,7 +29,7 @@ CFILES      :=	$(call FIND_SOURCE_FILES,$(SOURCES),c)
 CPPFILES    :=	$(call FIND_SOURCE_FILES,$(SOURCES),cpp)
 SFILES      :=	$(call FIND_SOURCE_FILES,$(SOURCES),s)
 
-BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
+BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*))) pcv.bin
 
 #---------------------------------------------------------------------------------
 # use CXX for linking C++ projects, CC for standard C
@@ -123,6 +129,14 @@ $(OFILES) : $(ATMOSPHERE_LIBRARIES_DIR)/libstratosphere/$(ATMOSPHERE_LIBRARY_DIR
 #---------------------------------------------------------------------------------
 	@echo $(notdir $<)
 	@$(bin2o)
+
+#---------------------------------------------------------------------------------
+# pcv + generated header
+#---------------------------------------------------------------------------------
+pcv.bin : $(PCV_NSP)
+	@cp $< $@
+
+ldr_embedded_code.o : pcv.bin.o
 
 -include $(DEPENDS)
 

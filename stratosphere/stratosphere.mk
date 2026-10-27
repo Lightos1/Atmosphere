@@ -5,9 +5,12 @@ THIS_MAKEFILE     := $(abspath $(lastword $(MAKEFILE_LIST)))
 CURRENT_DIRECTORY := $(abspath $(dir $(THIS_MAKEFILE)))
 include $(CURRENT_DIRECTORY)/../libraries/config/common.mk
 
-ALL_MODULES := loader boot ncm pm sm ams_mitm spl eclct.stub ro creport fatal dmnt boot2 erpt pgl jpegdec LogManager cs htc TioServer dmnt.gen2 memlet
+ALL_MODULES := loader boot ncm pm sm ams_mitm spl eclct.stub ro creport fatal dmnt boot2 erpt pgl jpegdec LogManager cs htc TioServer dmnt.gen2 memlet pcv
 
 all: $(ALL_MODULES)
+
+# loader embeds pcv.nsp, so pcv has to be built first.
+loader: pcv
 
 $(ALL_MODULES): check_lib
 	@$(SILENTCMD)echo Checking $@...
