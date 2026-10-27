@@ -15,7 +15,7 @@
  */
 #include <stratosphere.hpp>
 
-#include "rtc/pcv_rtc_driver.hpp"
+#include "rtc/pcv_rtc.hpp"
 #include "rtc/pcv_rtc_service.hpp"
 
 #include "pcv_service/pcv_service_fuse.hpp"

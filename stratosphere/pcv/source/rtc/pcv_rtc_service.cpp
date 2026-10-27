@@ -16,7 +16,7 @@
 
 #include <stratosphere.hpp>
 #include "pcv_rtc_service.hpp"
-#include "pcv_rtc_driver.hpp"
+#include "pcv_rtc.hpp"
 
 namespace ams::pcv::rtc {
 
