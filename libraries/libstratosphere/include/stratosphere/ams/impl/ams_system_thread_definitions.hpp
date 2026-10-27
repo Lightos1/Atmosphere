@@ -179,6 +179,7 @@ namespace ams::impl {
     /* pcv */
     AMS_DEFINE_SYSTEM_THREAD(4, pcv, Main);
     AMS_DEFINE_SYSTEM_THREAD(4, pcv, RtcIpcServer);
+    AMS_DEFINE_SYSTEM_THREAD(-5, pcv, PcvIpcServer);
 
     #undef AMS_DEFINE_SYSTEM_THREAD
 

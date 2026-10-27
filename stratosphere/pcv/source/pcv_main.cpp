@@ -18,39 +18,76 @@
 #include "rtc/pcv_rtc_driver.hpp"
 #include "rtc/pcv_rtc_service.hpp"
 
+#include "pcv_service/pcv_service_fuse.hpp"
+#include "pcv_service/pcv_service.hpp"
+
 namespace ams {
 
-    namespace pcv::rtc {
+    namespace pcv {
 
-        namespace {
+        namespace rtc {
 
-            constexpr sm::ServiceName RtcServiceName = sm::ServiceName::Encode("rtc");
-            constexpr size_t          RtcMaxSessions = 8;
+            namespace {
 
-            sf::hipc::ServerManager<1, sf::hipc::DefaultServerManagerOptions, RtcMaxSessions> g_server_manager;
-            sf::UnmanagedServiceObject<IRtcManager, RtcService> g_rtc_service;
+                constexpr sm::ServiceName RtcServiceName = sm::ServiceName::Encode("rtc");
+                constexpr size_t          RtcMaxSessions = 3;
 
-            alignas(os::ThreadStackAlignment) constinit u8 g_thread_stack[0x4000];
-            constinit os::ThreadType g_thread;
+                sf::hipc::ServerManager<1, sf::hipc::DefaultServerManagerOptions, RtcMaxSessions> g_server_manager;
+                sf::UnmanagedServiceObject<IRtcManager, RtcService> g_rtc_service;
 
-            void ThreadFunction(void *) {
-                g_server_manager.LoopProcess();
+                alignas(os::ThreadStackAlignment) constinit u8 g_thread_stack[0x1000];
+                constinit os::ThreadType g_thread;
+
+                void ThreadFunction(void *) {
+                    g_server_manager.LoopProcess();
+                }
+
+            }
+
+            void InitializeServer() {
+                R_ABORT_UNLESS(g_server_manager.RegisterObjectForServer(g_rtc_service.GetShared(), RtcServiceName, RtcMaxSessions));
+            }
+
+            void StartServer() {
+                R_ABORT_UNLESS(os::CreateThread(std::addressof(g_thread), ThreadFunction, nullptr, g_thread_stack, sizeof(g_thread_stack), AMS_GET_SYSTEM_THREAD_PRIORITY(pcv, RtcIpcServer)));
+                os::SetThreadNamePointer(std::addressof(g_thread), AMS_GET_SYSTEM_THREAD_NAME(pcv, RtcIpcServer));
+                os::StartThread(std::addressof(g_thread));
             }
 
         }
 
-        void InitializeServer() {
-            R_ABORT_UNLESS(g_server_manager.RegisterObjectForServer(g_rtc_service.GetShared(), RtcServiceName, RtcMaxSessions));
-        }
+        namespace detail {
 
-        void StartServer() {
-            R_ABORT_UNLESS(os::CreateThread(std::addressof(g_thread), ThreadFunction, nullptr, g_thread_stack, sizeof(g_thread_stack), AMS_GET_SYSTEM_THREAD_PRIORITY(pcv, RtcIpcServer)));
-            os::SetThreadNamePointer(std::addressof(g_thread), AMS_GET_SYSTEM_THREAD_NAME(pcv, RtcIpcServer));
-            os::StartThread(std::addressof(g_thread));
-        }
+            namespace {
 
-        void WaitServer() {
-            os::WaitThread(std::addressof(g_thread));
+                constexpr sm::ServiceName PcvServiceName = sm::ServiceName::Encode("pcv");
+                constexpr size_t          PcvMaxSessions = 30;
+
+                sf::hipc::ServerManager<1, sf::hipc::DefaultServerManagerOptions, PcvMaxSessions> g_server_manager;
+                sf::UnmanagedServiceObject<IPcvManager, PcvService> g_pcv_service;
+
+                alignas(os::ThreadStackAlignment) constinit u8 g_thread_stack[0x1000];
+                constinit os::ThreadType g_thread;
+
+                void ThreadFunction(void *) {
+                    g_server_manager.LoopProcess();
+                }
+            }
+
+            void InitializeServer() {
+                R_ABORT_UNLESS(g_server_manager.RegisterObjectForServer(g_pcv_service.GetShared(), PcvServiceName, PcvMaxSessions));
+            }
+
+            void StartServer() {
+                R_ABORT_UNLESS(os::CreateThread(std::addressof(g_thread), ThreadFunction, nullptr, g_thread_stack, sizeof(g_thread_stack), AMS_GET_SYSTEM_THREAD_PRIORITY(pcv, PcvIpcServer)));
+                os::SetThreadNamePointer(std::addressof(g_thread), AMS_GET_SYSTEM_THREAD_NAME(pcv, PcvIpcServer));
+                os::StartThread(std::addressof(g_thread));
+            }
+
+            void WaitServer() {
+                os::WaitThread(std::addressof(g_thread));
+            }
+
         }
 
     }
@@ -81,7 +118,12 @@ namespace ams {
         R_ABORT_UNLESS(pcv::rtc::Initialize());
         pcv::rtc::InitializeServer();
         pcv::rtc::StartServer();
-        pcv::rtc::WaitServer();
+
+        pcv::detail::InitializeFuseInfo();
+        pcv::detail::InitializeServer();
+        pcv::detail::StartServer();
+
+        pcv::detail::WaitServer();
     }
 
 }
