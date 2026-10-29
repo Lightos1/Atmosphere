@@ -16,12 +16,10 @@
 
 #pragma once
 #include <stratosphere.hpp>
+#include "../pcv_i2c.hpp"
 
 namespace ams::pcv::rtc {
 
-    Result InitializeI2cSessions(i2c::I2cSession &pmic_session, i2c::I2cSession &rtc_session);
-    Result I2cWrite(i2c::I2cSession &session, u8 reg, u8 value);
-    Result I2cRead(i2c::I2cSession &session, u8 *dst, size_t dst_size, const u8 *cmd, size_t cmd_size);
-    Result I2cReadUntilFlagClear(i2c::I2cSession &session, u8 &out, u8 cmd, u8 flag);
+    Result I2cReadUntilFlagClear(i2c::I2cSession &session, u8 reg, u8 &out, u8 flag);
 
 }

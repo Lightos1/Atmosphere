@@ -37,8 +37,9 @@ namespace ams::pcv::detail {
 
         void GetFuseInfo() {
             constexpr dd::PhysicalAddress FuseBase = 0x7000F800;
+            constexpr size_t              FuseSize = 0x400;
 
-            uintptr_t virt_address = dd::QueryIoMapping(FuseBase, FuseBase);
+            const uintptr_t virt_address = dd::QueryIoMapping(FuseBase, FuseSize);
 
             g_fuse_info.cpu_speedo = *reinterpret_cast<u32 *>(virt_address + FuseCpuSpeedoCalib);
             g_fuse_info.gpu_speedo = *reinterpret_cast<u32 *>(virt_address + FuseGpuSpeedoCalib);

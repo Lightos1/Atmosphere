@@ -180,6 +180,7 @@ namespace ams::impl {
     AMS_DEFINE_SYSTEM_THREAD(4, pcv, Main);
     AMS_DEFINE_SYSTEM_THREAD(4, pcv, RtcIpcServer);
     AMS_DEFINE_SYSTEM_THREAD(-5, pcv, PcvIpcServer);
+    AMS_DEFINE_SYSTEM_THREAD(4, pcv, BpcPowerManager);
 
     #undef AMS_DEFINE_SYSTEM_THREAD
 

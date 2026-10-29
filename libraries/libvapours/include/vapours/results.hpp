@@ -23,6 +23,7 @@
 #include <vapours/results/results_common.hpp>
 
 /* Official. */
+#include <vapours/results/bpc_results.hpp>
 #include <vapours/results/cal_results.hpp>
 #include <vapours/results/capsrv_results.hpp>
 #include <vapours/results/creport_results.hpp>

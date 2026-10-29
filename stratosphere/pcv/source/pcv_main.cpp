@@ -21,6 +21,8 @@
 #include "pcv_service/pcv_service_fuse.hpp"
 #include "pcv_service/pcv_service.hpp"
 
+#include "bpc/pcv_bpc.hpp"
+
 namespace ams {
 
     namespace pcv {
@@ -101,6 +103,8 @@ namespace ams {
             /* Verify that we can sanely execute. */
             ams::CheckApiVersion();
 
+            i2c::Initialize();
+
             R_ABORT_UNLESS(::setsysInitialize());
         }
 
@@ -119,11 +123,17 @@ namespace ams {
         pcv::rtc::InitializeServer();
         pcv::rtc::StartServer();
 
+        pcv::bpc::Initialize();
+        pcv::bpc::StartPowerManager();
+
         pcv::detail::InitializeFuseInfo();
         pcv::detail::InitializeServer();
         pcv::detail::StartServer();
 
+        AMS_ABORT();
+
         pcv::detail::WaitServer();
+
     }
 
 }

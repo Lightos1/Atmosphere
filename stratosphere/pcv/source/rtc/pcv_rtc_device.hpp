@@ -115,9 +115,8 @@ namespace ams::pcv::rtc {
                 for (u32 attempt = 0; attempt < MaxAttempts; ++attempt) {
                     svc::SleepThread(20'000'000);
 
-                    const u8 cmd = Max77620RtcUpdate1Reg;
                     u8 update    = 0;
-                    R_TRY(I2cRead(m_session, std::addressof(update), sizeof(update), std::addressof(cmd), sizeof(cmd)));
+                    R_TRY(I2cRead(m_session, Max77620RtcUpdate1Reg, update));
 
                     if ((update & Max77620RtcUpdate1ReadReady) != 0) {
                         ready = true;
@@ -128,8 +127,7 @@ namespace ams::pcv::rtc {
 
                 /* Read the requested registers. */
                 for (u8 i = 0; i < count; ++i) {
-                    const u8 cmd = reg + i;
-                    R_TRY(I2cRead(m_session, out + i, sizeof(u8), std::addressof(cmd), sizeof(cmd)));
+                    R_TRY(I2cRead(m_session, reg + i, out[i]));
                 }
 
                 return ResultSuccess();
@@ -148,7 +146,7 @@ namespace ams::pcv::rtc {
 
                 /* Wait until the write flag is cleared. */
                 u8 out = 0;
-                R_TRY(I2cReadUntilFlagClear(m_session, out, Max77620RtcUpdate0Reg, Max77620RtcWriteUpdate));
+                R_TRY(I2cReadUntilFlagClear(m_session, Max77620RtcUpdate0Reg, out, Max77620RtcWriteUpdate));
 
                 return ResultSuccess();
             }
@@ -381,6 +379,12 @@ namespace ams::pcv::rtc {
             }
 
             ALWAYS_INLINE bool IsReady() const { return m_ready; }
+
+            Result ReadInterruptMask(u8 *out) {
+                R_UNLESS(IsReady(), ResultDeviceNotReady());
+
+                return ReadRtcRegisters(Max77620RtcIntMReg, 1, out);
+            }
 
             Result WriteAlarmTime(u32 alarm_id, const RtcRegisters &time) {
                 R_UNLESS(IsReady(),             ResultDeviceNotReady());

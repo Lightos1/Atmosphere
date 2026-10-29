@@ -82,4 +82,16 @@ namespace ams::pcv::rtc {
     constexpr inline u8 Max77620Cnfg1_32K_LoadMask = 0x30;
     constexpr inline u8 Max77620Cnfg1_32K_OK       = BIT(7);
 
+    /* Interrupt masks (unknown) */
+    constexpr inline u8 Max77620RtcIrqBit0Mask = BIT(0);
+    constexpr inline u8 Max77620RtcIrqBit1Mask = BIT(1);
+    constexpr inline u8 Max77620RtcIrqBit2Mask = BIT(2);
+    constexpr inline u8 Max77620RtcIrqBit4Mask = BIT(4);
+
+    /* Interrupt flags (unknown) */
+    constexpr inline u32 Max77620RtcFlagFromBit1 = BIT(0);
+    constexpr inline u32 Max77620RtcFlagFromBit4 = BIT(1);
+    constexpr inline u32 Max77620RtcFlagFromBit0 = BIT(2);
+    constexpr inline u32 Max77620RtcFlagFromBit2 = BIT(3);
+
 }

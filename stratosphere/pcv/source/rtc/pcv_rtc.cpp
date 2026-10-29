@@ -30,7 +30,7 @@ namespace ams::pcv::rtc {
         constinit RtcDevice g_rtc_device(g_rtc_session);
 
         void CheckExternalRtcReset() {
-            /* If the reset flag is already set, the time can't be trusted anyway. */
+            /* Check if rtc was reset. */
             if (GetExternalRtcResetFlag()) {
                 return;
             }
@@ -40,13 +40,12 @@ namespace ams::pcv::rtc {
 
             /* Wait until the flag gets cleared. */
             u8 out_value = 0;
-            R_ABORT_UNLESS(I2cReadUntilFlagClear(g_rtc_session, out_value, Max77620RtcUpdate0Reg, Max77620RtcReadUpdate));
+            R_ABORT_UNLESS(I2cReadUntilFlagClear(g_rtc_session, Max77620RtcUpdate0Reg, out_value, Max77620RtcReadUpdate));
 
             /* Read the control register. */
             u8 rtc_control_reg = 0;
             {
-                u8 cmd = Max77620RtcControlReg;
-                R_ABORT_UNLESS(I2cRead(g_rtc_session, std::addressof(rtc_control_reg), sizeof(rtc_control_reg), std::addressof(cmd), sizeof(cmd)));
+                R_ABORT_UNLESS(I2cRead(g_rtc_session, Max77620RtcControlReg, rtc_control_reg));
             }
 
             /* Nintendo assumes that the control reg is set to MAX77620_RTC_24H. */
@@ -64,8 +63,7 @@ namespace ams::pcv::rtc {
             /* Get the pmic config of the 32khz oscillator. */
             u8 oscil_config = 0;
             {
-                u8 cmd = Max77620RegCnfg1_32K;
-                R_ABORT_UNLESS(I2cRead(g_pmic_session, std::addressof(oscil_config), sizeof(oscil_config), std::addressof(cmd), sizeof(cmd)));
+                R_ABORT_UNLESS(I2cRead(g_pmic_session, Max77620RegCnfg1_32K, oscil_config));
             }
 
             /* Set the rate to 32khz. */
@@ -81,7 +79,8 @@ namespace ams::pcv::rtc {
 
     Result Initialize() {
         /* Initialize pmic and rtc i2c sessions */
-        R_ABORT_UNLESS(InitializeI2cSessions(g_pmic_session, g_rtc_session));
+        R_ABORT_UNLESS(i2c::OpenSession(std::addressof(g_pmic_session), i2c::DeviceCode_Max77620Pmic));
+        R_ABORT_UNLESS(i2c::OpenSession(std::addressof(g_rtc_session),  i2c::DeviceCode_Max77620Rtc));
 
         /* Check if we can trust the time */
         CheckExternalRtcReset();
