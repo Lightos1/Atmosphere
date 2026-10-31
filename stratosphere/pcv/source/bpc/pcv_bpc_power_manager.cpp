@@ -414,9 +414,14 @@ namespace ams::pcv::bpc {
         /* Disable the alarm. */
         R_DISCARD(rtc::GetRtcDevice().DisableAlarm(0));
 
+        /* Read the quasi-off setting, whatever that is. */
+        bool enable_quasi_off;
+        if (settings::fwdbg::GetSettingsItemValue(std::addressof(enable_quasi_off), sizeof(enable_quasi_off), "bpc", "enable_quasi_off") != sizeof(enable_quasi_off)) {
+            enable_quasi_off = false;
+        }
+
         /* Disable the wake alarm. */
-        /* NOTE: the alarm is also unconditionally disabled on calcio. */
-        if (reboot) {
+        if (!enable_quasi_off || reboot || spl::GetHardwareType() == spl::HardwareType::Calcio) {
             R_ABORT_UNLESS(SetWakeAlarm(false, true));
         } else {
             R_ABORT_UNLESS(SetWakeAlarm(true, true));
