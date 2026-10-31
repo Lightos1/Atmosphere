@@ -16,10 +16,12 @@
 
 #pragma once
 #include <stratosphere.hpp>
+#include "pcv_bpc_power_manager.hpp"
 
 namespace ams::pcv::bpc {
 
     void Initialize();
     void StartPowerManager();
+    PowerManager &GetPowerManager();
 
 }

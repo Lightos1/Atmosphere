@@ -151,6 +151,20 @@ namespace ams::pcv::bpc {
     /* Edges that signal the power button event. */
     constexpr inline u8 Max77620PmicOnOffIrqPowerButtonMask = Max77620PmicOnOffIrqEn0FallMask | Max77620PmicOnOffIrqEn0RiseMask;
 
+    /* ONOFFCNFG1 bits. */
+    constexpr inline u8 Max77620PmicOnOffCnfg1SftRstMask   = BIT(7); /* Trigger soft reset. */
+    constexpr inline u8 Max77620PmicOnOffCnfg1MrtMask      = 0x38;   /* Manual reset time. */
+    constexpr inline u8 Max77620PmicOnOffCnfg1MrtShift     = 3;
+    constexpr inline u8 Max77620PmicOnOffCnfg1SlpEnMask    = BIT(2); /* Enter sleep. */
+    constexpr inline u8 Max77620PmicOnOffCnfg1PwrOffMask   = BIT(1); /* Trigger power off. */
+
+    /* ONOFFCNFG2 bits. */
+    constexpr inline u8 Max77620PmicOnOffCnfg2SftRstWkMask = BIT(7); /* Wake after soft reset (reboot) */
+    constexpr inline u8 Max77620PmicOnOffCnfg2WdRstWkMask  = BIT(6); /* Wake after watchdog reset. */
+    constexpr inline u8 Max77620PmicOnOffCnfg2SlpLpmMask   = BIT(5); /* Low-power mode while asleep. */
+    constexpr inline u8 Max77620PmicOnOffCnfg2WkAlarm1Mask = BIT(2); /* Wake on RTC alarm 1. */
+    constexpr inline u8 Max77620PmicOnOffCnfg2WkEn0Mask    = BIT(0); /* Wake on power button */
+
     /* ONOFFSTAT bits. */
     constexpr inline u8 Max77620PmicOnOffStatLidMask  = BIT(0);
     constexpr inline u8 Max77620PmicOnOffStatAcOkMask = BIT(1);

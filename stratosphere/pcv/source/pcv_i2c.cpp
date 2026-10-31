@@ -24,7 +24,20 @@ namespace ams::pcv {
         constexpr i2c::TransactionOption StartStop = static_cast<i2c::TransactionOption>(i2c::TransactionOption_StartCondition | i2c::TransactionOption_StopCondition);
         constexpr size_t I2cBufferSize = 32;
 
+        Result ReadBytes(i2c::I2cSession &session, u8 reg, void *out, size_t size) {
+            u8 cmd_list[i2c::CommandListLengthMax];
+            i2c::CommandListFormatter formatter(cmd_list, sizeof(cmd_list));
+
+            R_ABORT_UNLESS(formatter.EnqueueSendCommand(i2c::TransactionOption_StartCondition, std::addressof(reg), sizeof(reg)));
+            R_ABORT_UNLESS(formatter.EnqueueReceiveCommand(StartStop, size));
+
+            R_RETURN(i2c::ExecuteCommandList(out, size, session, cmd_list, formatter.GetCurrentLength()));
+        }
+
     }
+
+    Result I2cRead(i2c::I2cSession &session, u8 reg, u8 &out)  { R_RETURN(ReadBytes(session, reg, std::addressof(out), sizeof(out))); }
+    Result I2cRead(i2c::I2cSession &session, u8 reg, u16 &out) { R_RETURN(ReadBytes(session, reg, std::addressof(out), sizeof(out))); }
 
     Result I2cWrite(i2c::I2cSession &session, u8 reg, u8 value) {
         const u8 buf[2] = { reg, value };
@@ -32,14 +45,10 @@ namespace ams::pcv {
         R_RETURN(i2c::Send(session, buf, sizeof(buf), StartStop));
     }
 
-    Result I2cRead(i2c::I2cSession &session, u8 reg, u8 &out) {
-        u8 cmd_list[i2c::CommandListLengthMax];
-        i2c::CommandListFormatter formatter(cmd_list, sizeof(cmd_list));
+    Result I2cWrite(i2c::I2cSession &session, u8 reg, u16 value) {
+        const u8 buf[3] = { reg, static_cast<u8>(value & 0xFF), static_cast<u8>(value >> 8) };
 
-        R_ABORT_UNLESS(formatter.EnqueueSendCommand(i2c::TransactionOption_StartCondition, std::addressof(reg), sizeof(reg)));
-        R_ABORT_UNLESS(formatter.EnqueueReceiveCommand(StartStop, sizeof(out)));
-
-        R_RETURN(i2c::ExecuteCommandList(std::addressof(out), sizeof(out), session, cmd_list, formatter.GetCurrentLength()));
+        R_RETURN(i2c::Send(session, buf, sizeof(buf), StartStop));
     }
 
 }

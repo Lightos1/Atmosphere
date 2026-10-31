@@ -54,12 +54,13 @@ namespace ams::pcv::bpc {
             alignas(os::ThreadStackAlignment) u8 m_thread_stack[0x1000]{};
 
             os::SdkMutex            m_irq_mutex;
-            bool                    m_irq_gated               = false;
-            bool                    m_irq_pending_while_gated = false;
-            bool                    m_prev_ac_ok              = false;
-            bool                    m_prev_pressed            = false;
-            bool                    m_long_press_alarm_set    = false;
-            bool                    m_wake_alarm_enabled      = false;
+            bool                    m_irq_gated                   = false;
+            bool                    m_irq_pending_while_gated     = false;
+            bool                    m_prev_ac_ok                  = false;
+            bool                    m_prev_pressed                = false;
+            bool                    m_long_press_alarm_set        = false;
+            bool                    m_wake_alarm_enabled          = false;
+            bool                    m_setup_rtc_reset_on_shutdown = false;
 
             u8                      m_saved_irq_top_mask      = 0;
             u8                      m_saved_onoff_irq_mask    = 0;
@@ -91,10 +92,21 @@ namespace ams::pcv::bpc {
             void Resume();
             void OnOffCallback(u32 status);
         public:
-            Result GetAcOk(bool *out_ok);
-            Result GetPowerButton(bool *out_is_pushed);
-
             ALWAYS_INLINE void SetShutdownReason(u8 reason) { m_shutdown_reason = reason; }
+        private:
+            NORETURN void ShutdownOrRebootImpl(bool reboot);
+            NORETURN void ShutdownOrReboot(bool reboot);
+            void UpdateFuelGaugeForShutdown();
+        public:
+            NORETURN void ShutdownSystem();
+            NORETURN void RebootSystem();
+            void GetWakeupReason(u32 *out_wakeup_reason);
+            void GetShutdownReason(u32 *out_shutdown_reason);
+            Result GetAcOk(bool *out_ok);
+            Result GetPowerEvent(os::SystemEventType **out_event, u32 target);
+            Result GetPowerButtonEvent(os::SystemEventType **out_event, u32 target);
+            Result GetPowerButton(bool *out_is_pushed);
+            void SetUpRtcResetOnShutdown();
     };
 
 }

@@ -72,6 +72,7 @@ namespace ams::pcv::bpc {
             Result HandleInterrupt();
         public:
             ALWAYS_INLINE i2c::I2cSession &GetPmicSession()  { return m_pmic_session; }
+            ALWAYS_INLINE i2c::I2cSession &GetRtcSession()   { return m_rtc_session; }
             ALWAYS_INLINE IrqCallbackFn GetOnOffCallback() const { return m_on_off_callback; }
     };
 

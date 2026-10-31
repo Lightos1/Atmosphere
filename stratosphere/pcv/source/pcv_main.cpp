@@ -18,10 +18,11 @@
 #include "rtc/pcv_rtc.hpp"
 #include "rtc/pcv_rtc_service.hpp"
 
+#include "bpc/pcv_bpc.hpp"
+#include "bpc/pcv_bpc_service.hpp"
+
 #include "pcv_service/pcv_service_fuse.hpp"
 #include "pcv_service/pcv_service.hpp"
-
-#include "bpc/pcv_bpc.hpp"
 
 namespace ams {
 
@@ -53,6 +54,36 @@ namespace ams {
             void StartServer() {
                 R_ABORT_UNLESS(os::CreateThread(std::addressof(g_thread), ThreadFunction, nullptr, g_thread_stack, sizeof(g_thread_stack), AMS_GET_SYSTEM_THREAD_PRIORITY(pcv, RtcIpcServer)));
                 os::SetThreadNamePointer(std::addressof(g_thread), AMS_GET_SYSTEM_THREAD_NAME(pcv, RtcIpcServer));
+                os::StartThread(std::addressof(g_thread));
+            }
+
+        }
+
+        namespace bpc {
+
+            namespace {
+                constexpr sm::ServiceName BpcServiceName = sm::ServiceName::Encode("bpc");
+                constexpr size_t          BpcMaxSessions = 13;
+
+                sf::hipc::ServerManager<1, sf::hipc::DefaultServerManagerOptions, BpcMaxSessions> g_server_manager;
+                sf::UnmanagedServiceObject<IBpcManager, BpcService> g_bpc_service;
+
+                alignas(os::ThreadStackAlignment) constinit u8 g_thread_stack[0x1000];
+                constinit os::ThreadType g_thread;
+
+                void ThreadFunction(void *) {
+                    g_server_manager.LoopProcess();
+                }
+
+            }
+
+            void InitializeServer() {
+                R_ABORT_UNLESS(g_server_manager.RegisterObjectForServer(g_bpc_service.GetShared(), BpcServiceName, BpcMaxSessions));
+            }
+
+            void StartServer() {
+                R_ABORT_UNLESS(os::CreateThread(std::addressof(g_thread), ThreadFunction, nullptr, g_thread_stack, sizeof(g_thread_stack), AMS_GET_SYSTEM_THREAD_PRIORITY(pcv, BpcIpcServer)));
+                os::SetThreadNamePointer(std::addressof(g_thread), AMS_GET_SYSTEM_THREAD_NAME(pcv, BpcIpcServer));
                 os::StartThread(std::addressof(g_thread));
             }
 
@@ -125,6 +156,8 @@ namespace ams {
 
         pcv::bpc::Initialize();
         pcv::bpc::StartPowerManager();
+        pcv::bpc::InitializeServer();
+        pcv::bpc::StartServer();
 
         pcv::detail::InitializeFuseInfo();
         pcv::detail::InitializeServer();
@@ -133,7 +166,6 @@ namespace ams {
         AMS_ABORT();
 
         pcv::detail::WaitServer();
-
     }
 
 }

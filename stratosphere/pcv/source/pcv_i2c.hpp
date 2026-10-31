@@ -20,7 +20,9 @@
 namespace ams::pcv {
 
     Result I2cWrite(i2c::I2cSession &session, u8 reg, u8 value);
+    Result I2cWrite(i2c::I2cSession &session, u8 reg, u16 value);
     Result I2cRead(i2c::I2cSession &session, u8 reg, u8 &out);
+    Result I2cRead(i2c::I2cSession &session, u8 reg, u16 &out);
 
     Result I2cWriteRegisters(i2c::I2cSession &session, u8 reg, u8 count, const u8 *data);
 

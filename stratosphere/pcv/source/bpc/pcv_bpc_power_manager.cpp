@@ -18,6 +18,7 @@
 #include "pcv_bpc_power_manager.hpp"
 #include "pcv_bpc_irq_device.hpp"
 #include "pcv_bpc_pmic_registers.hpp"
+#include "pcv_bpc_fuel_gauge_registers.hpp"
 #include "../rtc/pcv_rtc.hpp"
 
 namespace ams::pcv::bpc {
@@ -327,6 +328,130 @@ namespace ams::pcv::bpc {
         }
     }
 
+    NORETURN void PowerManager::ShutdownOrRebootImpl(bool reboot) {
+        /* Read the on off config. */
+        i2c::I2cSession &pmic_session = m_irq_device->GetPmicSession();
+        i2c::I2cSession &rtc_session  = m_irq_device->GetRtcSession();
+
+        u8 on_off_config_2;
+        R_ABORT_UNLESS(I2cRead(pmic_session, Max77620PmicOnOffCnfg2Reg, on_off_config_2));
+
+        /* Set config to soft reset (reboot). */
+        if (reboot) {
+            on_off_config_2 |= Max77620PmicOnOffCnfg2SftRstWkMask;
+        } else {
+            on_off_config_2 &= ~Max77620PmicOnOffCnfg2SftRstWkMask;
+        }
+
+        /* Write the config. */
+        R_ABORT_UNLESS(I2cWrite(pmic_session, Max77620PmicOnOffCnfg2Reg, on_off_config_2));
+
+        /* Read config for reset. */
+        u8 on_off_config_1;
+        R_ABORT_UNLESS(I2cRead(pmic_session, Max77620PmicOnOffCnfg1Reg, on_off_config_1));
+
+        /* Read rtc register. */
+        {
+            u8 value;
+            R_ABORT_UNLESS(I2cRead(rtc_session, rtc::Max77620RtcIntReg, value));
+        }
+
+        /* Set the reset. */
+        on_off_config_1 |= Max77620PmicOnOffCnfg1SftRstMask;
+        R_ABORT_UNLESS(I2cWrite(pmic_session, Max77620PmicOnOffCnfg1Reg, on_off_config_1));
+
+        /* The system should now be shut down. */
+        svc::SleepThread(TimeSpan::FromSeconds(5).GetNanoSeconds());
+
+        AMS_ABORT();
+    }
+
+    void PowerManager::UpdateFuelGaugeForShutdown() {
+        /* Open an i2c session to the fuel gauge. */
+        i2c::I2cSession fuel_gauge_session;
+        R_ABORT_UNLESS(i2c::OpenSession(std::addressof(fuel_gauge_session), i2c::DeviceCode_Max17050));
+
+        /* Reset the shutdown counter */
+        if (R_FAILED(I2cWrite(fuel_gauge_session, Max17050ShdnTimerReg, Max17050ShdnTimerThr7))) {
+            return;
+        }
+
+        /* Get the config. */
+        u16 config = 0;
+        if (R_FAILED(I2cRead(fuel_gauge_session, Max17050ConfigReg, config))) {
+            return;
+        }
+
+        /* Check if the charge is high on lites. */
+        bool high_charge = false;
+        if (spl::GetHardwareType() == spl::HardwareType::Hoag) {
+            u16 soc_rep = 0;
+            if (R_SUCCEEDED(I2cRead(fuel_gauge_session, Max17050SocRepReg, soc_rep))) {
+                high_charge = (soc_rep >> 8) >= Max17050HighChargePercent;
+            }
+        }
+
+        /* Check if ac is ok. */
+        bool ac_ok = false;
+        if (R_FAILED(GetAcOk(std::addressof(ac_ok)))) {
+            /* Nintendo sets it to true on failure? */
+            ac_ok = true;
+        }
+
+        const u16 i2c_sh = (ac_ok || high_charge) ? 0 : Max17050ConfigI2cSh;
+
+        /* Set the new config. */
+        const u16 new_config = (config & ~Max17050ConfigI2cSh) | i2c_sh;
+
+        /* Write the config if it has changed. */
+        /* NOTE: nintendo ignores the repturn value. */
+        if (new_config != config) {
+            R_DISCARD(I2cWrite(fuel_gauge_session, Max17050ConfigReg, new_config));
+        }
+    }
+
+    NORETURN void PowerManager::ShutdownOrReboot(bool reboot) {
+        /* Disable the alarm. */
+        R_DISCARD(rtc::GetRtcDevice().DisableAlarm(0));
+
+        /* Disable the wake alarm. */
+        /* NOTE: the alarm is also unconditionally disabled on calcio. */
+        if (reboot) {
+            R_ABORT_UNLESS(SetWakeAlarm(false, true));
+        } else {
+            R_ABORT_UNLESS(SetWakeAlarm(true, true));
+        }
+
+        if (m_setup_rtc_reset_on_shutdown) {
+            /* NOTE: Nintendo ignores the result. */
+            R_DISCARD(rtc::GetRtcDevice().SetUpResetOnShutdown());
+        }
+
+        /* Update the fuel gauge. */
+        UpdateFuelGaugeForShutdown();
+
+        /* Perform the actual shutdown. */
+        ShutdownOrRebootImpl(reboot);
+    }
+
+    NORETURN void PowerManager::ShutdownSystem() {
+        ShutdownOrReboot(false);
+    }
+
+    NORETURN void PowerManager::RebootSystem() {
+        ShutdownOrReboot(true);
+    }
+
+    void PowerManager::GetWakeupReason(u32 *out_wakeup_reason) {
+        /* NOTE: Nintendo does not check if this is nullptr. */
+        *out_wakeup_reason = m_wakeup_reason;
+    }
+
+    void PowerManager::GetShutdownReason(u32 *out_shutdown_reason) {
+        /* NOTE: Nintendo does not check if this is nullptr. */
+        *out_shutdown_reason = m_shutdown_reason;
+    }
+
     Result PowerManager::GetAcOk(bool *out_ok) {
         R_UNLESS(out_ok != nullptr, ResultInvalidArgument());
 
@@ -334,6 +459,28 @@ namespace ams::pcv::bpc {
         R_ABORT_UNLESS(I2cRead(m_irq_device->GetPmicSession(), Max77620PmicOnOffStatReg, on_off_state));
 
         *out_ok = (on_off_state & Max77620PmicOnOffStatAcOkMask) != 0;
+
+        return ResultSuccess();
+    }
+
+    Result PowerManager::GetPowerEvent(os::SystemEventType **out_event, u32 target) {
+        R_UNLESS(out_event != nullptr, ResultInvalidArgument());
+
+        /* Nintendo only supports target 0 */
+        R_UNLESS(target == 0, ResultInvalidArgument());
+
+        *out_event = std::addressof(m_ac_ok_system_event);
+
+        return ResultSuccess();
+    }
+
+    Result PowerManager::GetPowerButtonEvent(os::SystemEventType **out_event, u32 target) {
+        R_UNLESS(out_event != nullptr, ResultInvalidArgument());
+
+        /* Nintendo only supports target 0 */
+        R_UNLESS(target == 0, ResultInvalidArgument());
+
+        *out_event = std::addressof(m_power_button_system_event);
 
         return ResultSuccess();
     }
@@ -347,6 +494,10 @@ namespace ams::pcv::bpc {
         *out_is_pushed = (on_off_state & Max77620PmicOnOffStatEn0Mask) != 0;
 
         return ResultSuccess();
+    }
+
+    void PowerManager::SetUpRtcResetOnShutdown() {
+        m_setup_rtc_reset_on_shutdown = true;
     }
 
 }

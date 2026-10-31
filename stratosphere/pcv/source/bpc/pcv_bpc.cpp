@@ -93,4 +93,8 @@ namespace ams::pcv::bpc {
         g_power_manager.Start();
     }
 
+    PowerManager &GetPowerManager() {
+        return g_power_manager;
+    }
+
 }
